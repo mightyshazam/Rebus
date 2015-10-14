@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.23107.0
+# Visual Studio 2013
+VisualStudioVersion = 12.0.31101.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "core", "core", "{63AB64A3-A453-4663-BDB6-530F2136609D}"
 EndProject
@@ -160,6 +160,12 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rebus.Forklift.AzureStorageQueues", "Rebus.Forklift.AzureStorageQueues\Rebus.Forklift.AzureStorageQueues.csproj", "{A4583AE6-0F8D-4B73-B010-E4DD684E1D16}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rebus.NLog.Tests", "Rebus.NLog.Tests\Rebus.NLog.Tests.csproj", "{280C1E09-9E36-4213-BB1E-D4C75B6D74BA}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "mysql", "mysql", "{57DDB71C-BA6D-457B-9C17-6AC762C0BAA5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rebus.MySql", "Rebus.MySql\Rebus.MySql.csproj", "{78075FE0-9517-460F-9E31-4A39456C3B96}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rebus.MySql.Tests", "Rebus.MySql.Tests\Rebus.MySql.Tests.csproj", "{1900CCAA-CE37-45BF-B515-9497C3C5E17B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -343,6 +349,14 @@ Global
 		{280C1E09-9E36-4213-BB1E-D4C75B6D74BA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{280C1E09-9E36-4213-BB1E-D4C75B6D74BA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{280C1E09-9E36-4213-BB1E-D4C75B6D74BA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{78075FE0-9517-460F-9E31-4A39456C3B96}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{78075FE0-9517-460F-9E31-4A39456C3B96}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{78075FE0-9517-460F-9E31-4A39456C3B96}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{78075FE0-9517-460F-9E31-4A39456C3B96}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1900CCAA-CE37-45BF-B515-9497C3C5E17B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1900CCAA-CE37-45BF-B515-9497C3C5E17B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1900CCAA-CE37-45BF-B515-9497C3C5E17B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1900CCAA-CE37-45BF-B515-9497C3C5E17B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -419,5 +433,8 @@ Global
 		{52A213C3-D621-4859-96DB-2B2ACF72A91A} = {966F247E-2413-4C57-8943-0CDFA518C990}
 		{A4583AE6-0F8D-4B73-B010-E4DD684E1D16} = {966F247E-2413-4C57-8943-0CDFA518C990}
 		{280C1E09-9E36-4213-BB1E-D4C75B6D74BA} = {63E432DC-D486-4C9D-B38C-54FB53F07213}
+		{57DDB71C-BA6D-457B-9C17-6AC762C0BAA5} = {CBB5C5F8-7C91-422F-907D-F16182FA0154}
+		{78075FE0-9517-460F-9E31-4A39456C3B96} = {57DDB71C-BA6D-457B-9C17-6AC762C0BAA5}
+		{1900CCAA-CE37-45BF-B515-9497C3C5E17B} = {57DDB71C-BA6D-457B-9C17-6AC762C0BAA5}
 	EndGlobalSection
 EndGlobal
