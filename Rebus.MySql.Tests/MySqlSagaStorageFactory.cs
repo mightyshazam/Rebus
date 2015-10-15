@@ -94,7 +94,7 @@ namespace Rebus.MySql.Tests
                     {
                         using (var command = connection.CreateCommand())
                         {
-                            command.CommandText = string.Format("DROP TABLE [{0}]", tableName);
+                            command.CommandText = string.Format("DROP TABLE `{0}`", tableName);
                             command.ExecuteNonQuery();
                         }
                     }
@@ -199,7 +199,7 @@ namespace Rebus.MySql.Tests
 
         static string GetConnectionStringForDatabase(string databaseName)
         {
-            return string.Format("server=.; database={0}; uid=test;pwd=test;", databaseName);
+            return string.Format("Server=localhost; Database={0}; User=test; Password=Pa55word;", databaseName);
         }
     }
 }

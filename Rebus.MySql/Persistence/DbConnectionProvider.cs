@@ -31,8 +31,8 @@ namespace Rebus.MySql.Persistence
             _log = rebusLoggerFactory.GetCurrentClassLogger();
 
             var connectionString = GetConnectionString(connectionStringOrConnectionStringName);
-
-            _connectionString = EnsureMarsIsEnabled(connectionString);
+            _connectionString = connectionString;
+            //_connectionString = EnsureMarsIsEnabled(connectionString);
 
             IsolationLevel = IsolationLevel.ReadCommitted;
         }

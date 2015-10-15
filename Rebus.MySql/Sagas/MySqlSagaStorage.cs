@@ -85,7 +85,7 @@ namespace Rebus.MySql.Sagas
                 {
                     command.CommandText = string.Format(@"
 CREATE TABLE `{0}` (
-	`id` BINARY 16 NOT NULL,
+	`id` BINARY (16) NOT NULL,
 	`revision` int NOT NULL,
 	`data` LONGTEXT NOT NULL,
     CONSTRAINT `PK_{0}` PRIMARY KEY CLUSTERED 
@@ -106,18 +106,17 @@ CREATE TABLE `{0}` (
 	`key` varchar(200) NOT NULL,
 	`value` varchar(200) NOT NULL,
 	`saga_id` binary(16) NOT NULL,
-    CONSTRAINT `PK_{0}` PRIMARY KEY CLUSTERED 
+    CONSTRAINT `PK_{0}` PRIMARY KEY
     (
-	    `key` ASC,
-	    `value` ASC,
-	    `saga_type` ASC
+	    `key`,
+	    `value`,
+	    `saga_type`
+    ),
+    INDEX `IX_{0}_saga_id`
+    (
+	    `saga_id` ASC
     )
-)
-
-CREATE INDEX `IX_{0}_saga_id` ON `{0}`
-(
-	`saga_id` ASC
-)
+) 
 ", _indexTableName);
 
                     await command.ExecuteNonQueryAsync();
@@ -163,26 +162,28 @@ ALTER TABLE `{0}` CHECK CONSTRAINT `FK_{1}_id`
                 {
                     if (propertyName.Equals(_idPropertyName, StringComparison.InvariantCultureIgnoreCase))
                     {
-                        command.CommandText = string.Format(@"SELECT TOP 1 `data` FROM `{0}` WHERE `id` = @value", _dataTableName);
+                        command.CommandText = string.Format(@"SELECT `data` FROM `{0}` WHERE `id` = @value LIMIT 1", _dataTableName);
+                        command.Parameters.Add("value", MySqlDbType.Binary, 16).Value = (propertyValue is Guid ? 
+                                                                                            (Guid)propertyValue : 
+                                                                                            Guid.Parse((propertyValue ?? "").ToString())
+                                                                                        ).ToByteArray();
                     }
                     else
                     {
                         command.CommandText = string.Format(@"
-SELECT TOP 1 `saga`.`data` FROM `{0}` `saga`
+SELECT `saga`.`data` FROM `{0}` `saga`
     JOIN `{1}` `index` ON `saga`.`id` = `index`.`saga_id` 
 WHERE `index`.`saga_type` = @saga_type
     AND `index`.`key` = @key 
-    AND `index`.`value` = @value", _dataTableName, _indexTableName);
+    AND `index`.`value` = @value LIMIT 1", _dataTableName, _indexTableName);
 
                         var sagaTypeName = GetSagaTypeName(sagaDataType);
 
                         command.Parameters.Add("key", MySqlDbType.VarChar, propertyName.Length).Value = propertyName;
                         command.Parameters.Add("saga_type", MySqlDbType.VarChar, sagaTypeName.Length).Value = sagaTypeName;
-                    }
-
-                    var correlationPropertyValue = GetCorrelationPropertyValue(propertyValue);
-
-                    command.Parameters.Add("value", MySqlDbType.VarChar, correlationPropertyValue.Length).Value = correlationPropertyValue;
+                        var correlationPropertyValue = GetCorrelationPropertyValue(propertyValue);
+                        command.Parameters.Add("value", MySqlDbType.VarChar, correlationPropertyValue.Length).Value = correlationPropertyValue;
+                    }                  
 
                     var dbValue = await command.ExecuteScalarAsync();
                     var value = (string)dbValue;
@@ -331,7 +332,7 @@ UPDATE `{0}`
 
                 using (var command = connection.CreateCommand())
                 {
-                    command.CommandText = string.Format(@"DELETE FROM [{0}] WHERE [saga_id] = @id", _indexTableName);
+                    command.CommandText = string.Format(@"DELETE FROM `{0}` WHERE `saga_id` = @id", _indexTableName);
                     command.Parameters.Add("id", MySqlDbType.Binary).Value = sagaData.Id.ToByteArray();
                     await command.ExecuteNonQueryAsync();
                 }
@@ -386,7 +387,7 @@ VALUES
                 }
 
                 command.Parameters.Add("saga_type", MySqlDbType.VarChar).Value = sagaTypeName;
-                command.Parameters.Add("saga_id", MySqlDbType.Binary, 16).Value = sagaData.Id;
+                command.Parameters.Add("saga_id", MySqlDbType.Binary, 16).Value = sagaData.Id.ToByteArray();
 
                 try
                 {
