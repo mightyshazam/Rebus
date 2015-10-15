@@ -34,7 +34,12 @@
     <Reference Include="MySql.Data">
       <HintPath>..\packages\MySql.Data.6.9.7\lib\net45\MySql.Data.dll</HintPath>
     </Reference>
+    <Reference Include="Newtonsoft.Json, Version=7.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Newtonsoft.Json.7.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -43,6 +48,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Persistence\DbConnectionProvider.cs" />
+    <Compile Include="Persistence\DbConnectionWrapper.cs" />
+    <Compile Include="Persistence\IDbConnection.cs" />
+    <Compile Include="Persistence\IDbConnectionProvider.cs" />
+    <Compile Include="Persistence\MySqlPersistenceConfigurationExtensions.cs" />
+    <Compile Include="Rebus\MySql\Sagas\MySqlMagic.cs" />
     <Compile Include="Sagas\MySqlSagaStorage.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

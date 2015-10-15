@@ -1,14 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using Rebus.Logging;
 using System.Threading.Tasks;
 using Rebus.Sagas;
+using Newtonsoft.Json;
+using MySql.Data.MySqlClient;
+using Rebus.MySql.Persistence;
+using Rebus.Reflection;
+using Rebus.Exceptions;
 namespace Rebus.MySql.Sagas
 {
+    /// <summary>
+    /// Implementation of <see cref="ISagaStorage"/> that uses MySql to store saga data
+    /// </summary>
     public class MySqlSagaStorage : ISagaStorage
     {
-        /*const int MaximumSagaDataTypeNameLength = 40;
+        const int MaximumSagaDataTypeNameLength = 40;
 
         static readonly JsonSerializerSettings Settings =
             new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All };
@@ -76,13 +84,13 @@ namespace Rebus.MySql.Sagas
                 using (var command = connection.CreateCommand())
                 {
                     command.CommandText = string.Format(@"
-CREATE TABLE [dbo].[{0}] (
-	[id] [uniqueidentifier] NOT NULL,
-	[revision] [int] NOT NULL,
-	[data] [nvarchar](max) NOT NULL,
-    CONSTRAINT [PK_{0}] PRIMARY KEY CLUSTERED 
+CREATE TABLE `{0}` (
+	`id` BINARY 16 NOT NULL,
+	`revision` int NOT NULL,
+	`data` LONGTEXT NOT NULL,
+    CONSTRAINT `PK_{0}` PRIMARY KEY CLUSTERED 
     (
-	    [id] ASC
+	    `id` ASC
     )
 )
 ", _dataTableName);
@@ -93,22 +101,22 @@ CREATE TABLE [dbo].[{0}] (
                 using (var command = connection.CreateCommand())
                 {
                     command.CommandText = string.Format(@"
-CREATE TABLE [dbo].[{0}] (
-	[saga_type] [nvarchar](40) NOT NULL,
-	[key] [nvarchar](200) NOT NULL,
-	[value] [nvarchar](200) NOT NULL,
-	[saga_id] [uniqueidentifier] NOT NULL,
-    CONSTRAINT [PK_{0}] PRIMARY KEY CLUSTERED 
+CREATE TABLE `{0}` (
+	`saga_type` varchar(40) NOT NULL,
+	`key` varchar(200) NOT NULL,
+	`value` varchar(200) NOT NULL,
+	`saga_id` binary(16) NOT NULL,
+    CONSTRAINT `PK_{0}` PRIMARY KEY CLUSTERED 
     (
-	    [key] ASC,
-	    [value] ASC,
-	    [saga_type] ASC
+	    `key` ASC,
+	    `value` ASC,
+	    `saga_type` ASC
     )
 )
 
-CREATE NONCLUSTERED INDEX [IX_{0}_saga_id] ON [dbo].[{0}]
+CREATE INDEX `IX_{0}_saga_id` ON `{0}`
 (
-	[saga_id] ASC
+	`saga_id` ASC
 )
 ", _indexTableName);
 
@@ -118,23 +126,22 @@ CREATE NONCLUSTERED INDEX [IX_{0}_saga_id] ON [dbo].[{0}]
                 using (var command = connection.CreateCommand())
                 {
                     command.CommandText = string.Format(@"
-ALTER TABLE [dbo].[{0}] WITH CHECK 
-    ADD CONSTRAINT [FK_{1}_id] FOREIGN KEY([saga_id])
+ALTER TABLE `{0}` ADD CONSTRAINT `FK_{1}_id` FOREIGN KEY(`saga_id`)
 
-REFERENCES [dbo].[{1}] ([id]) ON DELETE CASCADE
+REFERENCES `{1}` (`id`) ON DELETE CASCADE
 ", _indexTableName, _dataTableName);
 
                     await command.ExecuteNonQueryAsync();
                 }
-
+                /*
                 using (var command = connection.CreateCommand())
                 {
                     command.CommandText = string.Format(@"
-ALTER TABLE [dbo].[{0}] CHECK CONSTRAINT [FK_{1}_id]
+ALTER TABLE `{0}` CHECK CONSTRAINT `FK_{1}_id`
 ", _indexTableName, _dataTableName);
 
                     await command.ExecuteNonQueryAsync();
-                }
+                }*/
 
                 await connection.Complete();
             }
@@ -156,26 +163,26 @@ ALTER TABLE [dbo].[{0}] CHECK CONSTRAINT [FK_{1}_id]
                 {
                     if (propertyName.Equals(_idPropertyName, StringComparison.InvariantCultureIgnoreCase))
                     {
-                        command.CommandText = string.Format(@"SELECT TOP 1 [data] FROM [{0}] WHERE [id] = @value", _dataTableName);
+                        command.CommandText = string.Format(@"SELECT TOP 1 `data` FROM `{0}` WHERE `id` = @value", _dataTableName);
                     }
                     else
                     {
                         command.CommandText = string.Format(@"
-SELECT TOP 1 [saga].[data] as 'data' FROM [{0}] [saga] 
-    JOIN [{1}] [index] ON [saga].[id] = [index].[saga_id] 
-WHERE [index].[saga_type] = @saga_type
-    AND [index].[key] = @key 
-    AND [index].[value] = @value", _dataTableName, _indexTableName);
+SELECT TOP 1 `saga`.`data` FROM `{0}` `saga`
+    JOIN `{1}` `index` ON `saga`.`id` = `index`.`saga_id` 
+WHERE `index`.`saga_type` = @saga_type
+    AND `index`.`key` = @key 
+    AND `index`.`value` = @value", _dataTableName, _indexTableName);
 
                         var sagaTypeName = GetSagaTypeName(sagaDataType);
 
-                        command.Parameters.Add("key", SqlDbType.NVarChar, propertyName.Length).Value = propertyName;
-                        command.Parameters.Add("saga_type", SqlDbType.NVarChar, sagaTypeName.Length).Value = sagaTypeName;
+                        command.Parameters.Add("key", MySqlDbType.VarChar, propertyName.Length).Value = propertyName;
+                        command.Parameters.Add("saga_type", MySqlDbType.VarChar, sagaTypeName.Length).Value = sagaTypeName;
                     }
 
                     var correlationPropertyValue = GetCorrelationPropertyValue(propertyValue);
 
-                    command.Parameters.Add("value", SqlDbType.NVarChar, correlationPropertyValue.Length).Value = correlationPropertyValue;
+                    command.Parameters.Add("value", MySqlDbType.VarChar, correlationPropertyValue.Length).Value = correlationPropertyValue;
 
                     var dbValue = await command.ExecuteScalarAsync();
                     var value = (string)dbValue;
@@ -211,16 +218,16 @@ WHERE [index].[saga_type] = @saga_type
                 {
                     var data = JsonConvert.SerializeObject(sagaData, Formatting.Indented, Settings);
 
-                    command.Parameters.Add("id", SqlDbType.UniqueIdentifier).Value = sagaData.Id;
-                    command.Parameters.Add("revision", SqlDbType.Int).Value = sagaData.Revision;
-                    command.Parameters.Add("data", SqlDbType.NVarChar).Value = data;
+                    command.Parameters.Add("id", MySqlDbType.Binary, 16).Value = sagaData.Id.ToByteArray();
+                    command.Parameters.Add("revision", MySqlDbType.Int32).Value = sagaData.Revision;
+                    command.Parameters.Add("data", MySqlDbType.LongText).Value = data;
 
-                    command.CommandText = string.Format(@"INSERT INTO [{0}] ([id], [revision], [data]) VALUES (@id, @revision, @data)", _dataTableName);
+                    command.CommandText = string.Format(@"INSERT INTO `{0}` (`id`, `revision`, `data`) VALUES (@id, @revision, @data)", _dataTableName);
                     try
                     {
                         await command.ExecuteNonQueryAsync();
                     }
-                    catch (SqlException sqlException)
+                    catch (MySqlException sqlException)
                     {
                         if (sqlException.Number == MySqlMagic.PrimaryKeyViolationNumber)
                         {
@@ -257,8 +264,8 @@ WHERE [index].[saga_type] = @saga_type
                     // first, delete existing index
                     using (var command = connection.CreateCommand())
                     {
-                        command.CommandText = string.Format(@"DELETE FROM [{0}] WHERE [saga_id] = @id", _indexTableName);
-                        command.Parameters.Add("id", SqlDbType.UniqueIdentifier).Value = sagaData.Id;
+                        command.CommandText = string.Format(@"DELETE FROM `{0}` WHERE `saga_id` = @id", _indexTableName);
+                        command.Parameters.Add("id", MySqlDbType.Binary, 16).Value = sagaData.Id.ToByteArray();
 
                         await command.ExecuteNonQueryAsync();
                     }
@@ -268,15 +275,15 @@ WHERE [index].[saga_type] = @saga_type
                     {
                         var data = JsonConvert.SerializeObject(sagaData, Formatting.Indented, Settings);
 
-                        command.Parameters.Add("id", SqlDbType.UniqueIdentifier).Value = sagaData.Id;
-                        command.Parameters.Add("current_revision", SqlDbType.Int).Value = revisionToUpdate;
-                        command.Parameters.Add("next_revision", SqlDbType.Int).Value = sagaData.Revision;
-                        command.Parameters.Add("data", SqlDbType.NVarChar).Value = data;
+                        command.Parameters.Add("id", MySqlDbType.Binary, 16).Value = sagaData.Id.ToByteArray();
+                        command.Parameters.Add("current_revision", MySqlDbType.Int32).Value = revisionToUpdate;
+                        command.Parameters.Add("next_revision", MySqlDbType.Int32).Value = sagaData.Revision;
+                        command.Parameters.Add("data", MySqlDbType.LongText).Value = data;
 
                         command.CommandText = string.Format(@"
-UPDATE [{0}] 
-    SET [data] = @data, [revision] = @next_revision 
-    WHERE [id] = @id AND [revision] = @current_revision", _dataTableName);
+UPDATE `{0}` 
+    SET `data` = @data, `revision` = @next_revision 
+    WHERE `id` = @id AND `revision` = @current_revision", _dataTableName);
 
                         var rows = await command.ExecuteNonQueryAsync();
 
@@ -312,9 +319,9 @@ UPDATE [{0}]
             {
                 using (var command = connection.CreateCommand())
                 {
-                    command.CommandText = string.Format(@"DELETE FROM [{0}] WHERE [id] = @id AND [revision] = @current_revision;", _dataTableName);
-                    command.Parameters.Add("id", SqlDbType.UniqueIdentifier).Value = sagaData.Id;
-                    command.Parameters.Add("current_revision", SqlDbType.Int).Value = sagaData.Revision;
+                    command.CommandText = string.Format(@"DELETE FROM `{0}` WHERE `id` = @id AND `revision` = @current_revision;", _dataTableName);
+                    command.Parameters.Add("id", MySqlDbType.Binary, 16).Value = sagaData.Id.ToByteArray();
+                    command.Parameters.Add("current_revision", MySqlDbType.VarChar).Value = sagaData.Revision;
                     var rows = await command.ExecuteNonQueryAsync();
                     if (rows == 0)
                     {
@@ -325,7 +332,7 @@ UPDATE [{0}]
                 using (var command = connection.CreateCommand())
                 {
                     command.CommandText = string.Format(@"DELETE FROM [{0}] WHERE [saga_id] = @id", _indexTableName);
-                    command.Parameters.Add("id", SqlDbType.UniqueIdentifier).Value = sagaData.Id;
+                    command.Parameters.Add("id", MySqlDbType.Binary).Value = sagaData.Id.ToByteArray();
                     await command.ExecuteNonQueryAsync();
                 }
 
@@ -345,12 +352,12 @@ UPDATE [{0}]
 
             var parameters = propertiesToIndexList
                 .Select((p, i) => new
-                {
-                    PropertyName = p.Key,
-                    PropertyValue = GetCorrelationPropertyValue(p.Value),
-                    PropertyNameParameter = string.Format("n{0}", i),
-                    PropertyValueParameter = string.Format("v{0}", i)
-                })
+            {
+                PropertyName = p.Key,
+                PropertyValue = GetCorrelationPropertyValue(p.Value),
+                PropertyNameParameter = string.Format("n{0}", i),
+                PropertyValueParameter = string.Format("v{0}", i)
+            })
                 .ToList();
 
             // lastly, generate new index
@@ -360,8 +367,8 @@ UPDATE [{0}]
                 var inserts = parameters
                     .Select(a => string.Format(
                         @"
-INSERT INTO [{0}]
-    ([saga_type], [key], [value], [saga_id]) 
+INSERT INTO `{0}`
+    (`saga_type`, `key`, `value`, `saga_id`) 
 VALUES
     (@saga_type, @{1}, @{2}, @saga_id)
 ",
@@ -374,18 +381,18 @@ VALUES
 
                 foreach (var parameter in parameters)
                 {
-                    command.Parameters.Add(parameter.PropertyNameParameter, SqlDbType.NVarChar).Value = parameter.PropertyName;
-                    command.Parameters.Add(parameter.PropertyValueParameter, SqlDbType.NVarChar).Value = parameter.PropertyValue;
+                    command.Parameters.Add(parameter.PropertyNameParameter, MySqlDbType.VarChar).Value = parameter.PropertyName;
+                    command.Parameters.Add(parameter.PropertyValueParameter, MySqlDbType.VarChar).Value = parameter.PropertyValue;
                 }
 
-                command.Parameters.Add("saga_type", SqlDbType.NVarChar).Value = sagaTypeName;
-                command.Parameters.Add("saga_id", SqlDbType.UniqueIdentifier).Value = sagaData.Id;
+                command.Parameters.Add("saga_type", MySqlDbType.VarChar).Value = sagaTypeName;
+                command.Parameters.Add("saga_id", MySqlDbType.Binary, 16).Value = sagaData.Id;
 
                 try
                 {
                     await command.ExecuteNonQueryAsync();
                 }
-                catch (SqlException sqlException)
+                catch (MySqlException sqlException)
                 {
                     if (sqlException.Number == MySqlMagic.PrimaryKeyViolationNumber)
                     {
@@ -430,25 +437,6 @@ saga type name.",
                 })
                 .Where(kvp => IndexNullProperties || kvp.Value != null)
                 .ToList();
-        }*/
-        public Task<ISagaData> Find(Type sagaDataType, string propertyName, object propertyValue)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task Insert(ISagaData sagaData, IEnumerable<ISagaCorrelationProperty> correlationProperties)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task Update(ISagaData sagaData, IEnumerable<ISagaCorrelationProperty> correlationProperties)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task Delete(ISagaData sagaData)
-        {
-            throw new NotImplementedException();
         }
     }
 }

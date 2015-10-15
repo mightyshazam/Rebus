@@ -3,7 +3,7 @@ using System.Linq.Expressions;
 
 namespace Rebus.Reflection
 {
-    class Reflect
+    public class Reflect
     {
         public static string Path<T>(Expression<Func<T, object>> expression)
         {

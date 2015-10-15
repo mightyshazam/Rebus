@@ -261,7 +261,9 @@
     <Compile Include="Workers\IWorkerFactory.cs" />
     <Compile Include="Workers\ThreadBased\ThreadWorkerFactory.cs" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="Persistence\Ado\" />
+  </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
     <None Include="Rebus.nuspec" />
