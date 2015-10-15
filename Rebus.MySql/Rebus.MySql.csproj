@@ -48,6 +48,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="MySqlSagaSnapshotStorage.cs" />
     <Compile Include="Persistence\DbConnectionProvider.cs" />
     <Compile Include="Persistence\DbConnectionWrapper.cs" />
     <Compile Include="Persistence\IDbConnection.cs" />
